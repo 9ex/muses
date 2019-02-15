@@ -19,8 +19,13 @@
     "superagent": "^4.1.0"
   },
   "scripts": {
-    "test": "jest"
+    "test": "jest",
+    "lint": "eslint . --ext .js",
+    "test-cov": "jest --coverage"
   },
+  "pre-commit": [
+    "lint"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/9ex/muses.git"
