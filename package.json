@@ -1,0 +1,52 @@
+{
+  "name": "muses",
+  "version": "0.0.0",
+  "description": "muses",
+  "main": "index.js",
+  "dependencies": {
+    "debug": "^4.1.1",
+    "proxy-agent": "^3.0.3"
+  },
+  "devDependencies": {
+    "eslint": "^5.13.0",
+    "eslint-config-standard": "^12.0.0",
+    "eslint-plugin-import": "^2.16.0",
+    "eslint-plugin-node": "^8.0.1",
+    "eslint-plugin-promise": "^4.0.1",
+    "eslint-plugin-standard": "^4.0.0",
+    "jest": "^24.0.0",
+    "pre-commit": "^1.2.2",
+    "superagent": "^4.1.0"
+  },
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/9ex/muses.git"
+  },
+  "keywords": [
+    "proxy"
+  ],
+  "author": "rexzheng",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/9ex/muses/issues"
+  },
+  "homepage": "https://github.com/9ex/muses#readme",
+  "jest": {
+    "testMatch": [
+      "**/test/**/*.js",
+      "!**/test/helper/*.js"
+    ],
+    "bail": true,
+    "testEnvironment": "node",
+    "collectCoverageFrom": [
+      "**/src/*.js"
+    ],
+    "coverageReporters": [
+      "text-summary",
+      "lcov"
+    ]
+  }
+}
