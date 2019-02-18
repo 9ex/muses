@@ -5,10 +5,10 @@ const { Request, Response } = require('../message');
 const REQUEST_TIMEOUT = 3600 * 1000;
 const MAX_BUFFER_SIZE = 4 * 1024 * 1024;
 
-async function handle(service, reader, writer) {
+async function handle(proxy, reader, writer) {
   try {
     receive({
-      service,
+      proxy,
       reader,
       writer
     });
@@ -19,7 +19,7 @@ async function handle(service, reader, writer) {
 
 async function receive(ctx) {
   let req = new Request(ctx.reader);
-  ctx.service.emit('request', req);
+  ctx.proxy.emit('request', req);
 
   let {
     res,
@@ -47,7 +47,7 @@ async function invoke(ctx, req, reqBody) {
   };
   let replier = await sendRequest(options, reqBody || req._raw);
   let res = new Response(replier);
-  ctx.service.emit('response', res);
+  ctx.proxy.emit('response', res);
 
   let {
     res: res2,
