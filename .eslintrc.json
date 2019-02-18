@@ -25,6 +25,9 @@
       "named": "never",
       "asyncArrow": "always"
     }],
+    "no-multi-spaces": ["error", {
+      "ignoreEOLComments": true
+    }],
     "yoda": "off",
     "arrow-spacing": "error",
     "dot-location": ["error", "property"],
