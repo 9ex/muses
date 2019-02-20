@@ -7,10 +7,12 @@ async function handle(proxy, request, clientSocket, head) {
     let { hostname, port } = new URL(`http://${request.url}`);
     port = +port || 443;
     let remoteSocket = await createRemoteSocket(port, hostname);
+    debug('remote socket created: %s:%d', remoteSocket.remoteAddress, remoteSocket.remotePort);
     writeEstablished(clientSocket);
 
     if (proxy.shouldDecryptHttps(hostname, port)) {
       debug('%s:%d decrypting https', hostname, port);
+
       clientSocket.once('data', buf => {
         clientSocket.pause();
         let proto = protocol.analyze(buf);
@@ -25,20 +27,30 @@ async function handle(proxy, request, clientSocket, head) {
       });
     } else {
       debug('do not decrypt https, %s:%d<=>%s:%d piping...',
-        clientSocket.remoteSocket, clientSocket.remotePort,
-        remoteSocket.remoteSocket, remoteSocket.remotePort);
+        clientSocket.remoteAddress, clientSocket.remotePort,
+        remoteSocket.remoteAddress, remoteSocket.remotePort);
+
       pipe(clientSocket, remoteSocket, head);
     }
   } catch (err) {
+    debug('error occurred: %s %s', err.code, err.message);
     writeError(clientSocket, err);
   }
 }
 
-function pipe(src, dest, buf) {
+function pipe(clientSocket, remoteSocket, buf) {
   if (buf) {
-    dest.write(buf);
+    remoteSocket.write(buf);
   }
-  src.pipe(dest).pipe(src);
+  clientSocket.once('error', err => {
+    debug('client socket error: %s %s', err.code, err.message);
+    remoteSocket.destroy();
+  });
+  remoteSocket.once('error', err => {
+    debug('remote socket error: %s %s', err.code, err.message);
+    remoteSocket.destroy();
+  });
+  clientSocket.pipe(remoteSocket).pipe(clientSocket);
 }
 
 async function createRemoteSocket(port, hostname) {
