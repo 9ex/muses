@@ -1,13 +1,16 @@
 const agent = require('../globalAgent');
 const protocol = require('./protocol');
+const debug = require('debug')('muses:handler:connect');
 
 async function handle(proxy, request, clientSocket, head) {
   try {
-    let url = new URL(`http://${request.url}`);
-    let remoteSocket = await createRemoteSocket(url);
+    let { hostname, port } = new URL(`http://${request.url}`);
+    port = +port || 443;
+    let remoteSocket = await createRemoteSocket(port, hostname);
     writeEstablished(clientSocket);
 
-    if (proxy.shouldDecryptHttps(url.hostname)) {
+    if (proxy.shouldDecryptHttps(hostname, port)) {
+      debug('%s:%d decrypting https', hostname, port);
       clientSocket.once('data', buf => {
         clientSocket.pause();
         let proto = protocol.analyze(buf);
@@ -21,6 +24,9 @@ async function handle(proxy, request, clientSocket, head) {
         clientSocket.resume();
       });
     } else {
+      debug('do not decrypt https, %s:%d<=>%s:%d piping...',
+        clientSocket.remoteSocket, clientSocket.remotePort,
+        remoteSocket.remoteSocket, remoteSocket.remotePort);
       pipe(clientSocket, remoteSocket, head);
     }
   } catch (err) {
@@ -35,8 +41,8 @@ function pipe(src, dest, buf) {
   src.pipe(dest).pipe(src);
 }
 
-async function createRemoteSocket(url) {
-  let remoteSocket = await agent.connect(url.hostname, +url.port || 443);
+async function createRemoteSocket(port, hostname) {
+  let remoteSocket = await agent.connect(port, hostname);
   return remoteSocket;
 }
 
