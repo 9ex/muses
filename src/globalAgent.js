@@ -19,7 +19,7 @@ function getAgent() {
   return agent;
 }
 
-function connect(hostname, port) {
+function connect(port, hostname) {
   return new Promise((resolve, reject) => {
     if (hasProxy()) {
       let options = { path: '/', host: hostname, port };
