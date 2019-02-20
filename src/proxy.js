@@ -2,6 +2,7 @@ const assert = require('assert');
 const http = require('http');
 const https = require('https');
 const EventEmitter = require('events');
+const debug = require('debug')('muses:proxy');
 const requestHandler = require('./handler/request');
 const connectHandler = require('./handler/connect');
 
@@ -17,8 +18,8 @@ class Proxy extends EventEmitter {
   constructor() {
     super();
 
-    this[SERVER] = createServer(http);
-    this[HTTPS_SERVER] = createServer(https);
+    this[SERVER] = createServer(this, http);
+    this[HTTPS_SERVER] = createServer(this, https);
     this[DECRYPT_HTTPS] = new DecryptHttpsOptions();
   }
 
@@ -150,15 +151,18 @@ class DecryptHttpsOptions {
   }
 }
 
-function createServer(protocol) {
+function createServer(proxy, protocol) {
   let server = protocol.createServer()
-    .on('request', requestHandler.bind(undefined, this))
-    .on('connect', connectHandler.bind(undefined, this))
+    .on('request', requestHandler.bind(undefined, proxy))
+    .on('connect', connectHandler.bind(undefined, proxy))
     .on('clientError', (_, socket) => socket && socket.end())
     .on('connection', socket => {
       if (!socket.muses) {
         socket.setNoDelay();
         Object.defineProperty(socket, 'muses', { value: {} });
+        socket.once('error', err => {
+          debug('client socket encounter an error: %s %s', err.code, err.message);
+        });
       }
     });
   server.timeout = DEFAULT_TIMEOUT;
