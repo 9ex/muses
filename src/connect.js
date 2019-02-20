@@ -1,8 +1,8 @@
-const agent = require('../globalAgent');
+const agent = require('./globalAgent');
 const protocol = require('./protocol');
-const debug = require('debug')('muses:handler:connect');
+const debug = require('debug')('muses:connect');
 
-async function handle(proxy, request, clientSocket, head) {
+async function handler(proxy, request, clientSocket, head) {
   try {
     let { hostname, port } = new URL(`http://${request.url}`);
     port = +port || 443;
@@ -72,4 +72,4 @@ function writeError(clientSocket, err) {
   clientSocket.end();
 }
 
-module.exports = handle;
+exports.handler = handler;

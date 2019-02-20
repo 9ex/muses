@@ -1,4 +1,4 @@
-const debug = require('debug')('muses:handler:protocol');
+const debug = require('debug')('muses:protocol');
 
 const KNOWN_SSL_VERSION = {
   0x0300: 'SSL 3.0',

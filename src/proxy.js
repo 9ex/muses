@@ -3,8 +3,8 @@ const http = require('http');
 const https = require('https');
 const EventEmitter = require('events');
 const debug = require('debug')('muses:proxy');
-const requestHandler = require('./handler/request');
-const connectHandler = require('./handler/connect');
+const requestHandler = require('./request').handler;
+const connectHandler = require('./connect').handler;
 
 const DEFAULT_TIMEOUT = 2 * 3600 * 1000;
 const SERVER = Symbol('proxy.server');
@@ -151,8 +151,8 @@ class DecryptHttpsOptions {
   }
 }
 
-function createServer(proxy, protocol) {
-  let server = protocol.createServer()
+function createServer(proxy, protocol, options) {
+  let server = protocol.createServer(options || {})
     .on('request', requestHandler.bind(undefined, proxy))
     .on('connect', connectHandler.bind(undefined, proxy))
     .on('clientError', (_, socket) => socket && socket.end())

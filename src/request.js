@@ -1,11 +1,11 @@
 const http = require('http');
 const ReadableStream = require('stream').Readable;
-const { Request, Response } = require('../message');
+const { Request, Response } = require('./message');
 
 const REQUEST_TIMEOUT = 3600 * 1000;
 const MAX_BUFFER_SIZE = 4 * 1024 * 1024;
 
-async function handle(proxy, reader, writer) {
+async function handler(proxy, reader, writer) {
   try {
     receive({
       proxy,
@@ -144,4 +144,4 @@ function readAll(stream, sizeLimit) {
   });
 }
 
-module.exports = handle;
+exports.handler = handler;
