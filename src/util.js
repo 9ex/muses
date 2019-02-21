@@ -1,5 +1,4 @@
 const util = require('util');
-const fs = require('fs');
 
 exports.fit = function (promise, fn) {
   if (fn) {
@@ -8,11 +7,5 @@ exports.fit = function (promise, fn) {
     return promise;
   }
 };
-
-exports.stat = util.promisify(fs.stat);
-
-exports.readFile = util.promisify(fs.readFile);
-
-exports.writeFile = util.promisify(fs.writeFile);
 
 Object.assign(exports, util);

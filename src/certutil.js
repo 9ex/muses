@@ -1,5 +1,6 @@
 const assert = require('assert');
 const util = require('./util');
+const fs = require('fs').promises;
 const forge = require('node-forge');
 const pki = forge.pki;
 
@@ -64,8 +65,8 @@ class Cert {
 
   save(certFile, keyFile, fn) {
     let promise = Promise.all([
-      util.writeFile(certFile, this.pem.cert),
-      util.writeFile(keyFile, this.pem.key)
+      fs.writeFile(certFile, this.pem.cert),
+      fs.writeFile(keyFile, this.pem.key)
     ]).then(() => this);
 
     return util.fit(promise, fn);
@@ -127,8 +128,8 @@ function createCertificate(commonName, days, altNames) {
 
 function load(certFile, keyFile, fn) {
   let promise = Promise.all([
-    util.readFile(certFile),
-    util.readFile(keyFile)
+    fs.readFile(certFile),
+    fs.readFile(keyFile)
   ]).then(files => loadPem(files[0], files[1]));
   return util.fit(promise, fn);
 }
