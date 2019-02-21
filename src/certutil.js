@@ -18,19 +18,13 @@ const KEY = Symbol('cert.key');
 const PEM = Symbol('cert.pem');
 
 class Cert {
-  constructor(certPem, keyPem, cert, key) {
-    assert(typeof certPem === 'string' || certPem instanceof Buffer, 'certPem must be string or Buffer');
-    assert(typeof keyPem === 'string' || keyPem instanceof Buffer, 'keyPem must be string or Buffer');
+  constructor(cert, key) {
     assert(!cert || 'subject' in cert, 'cert must be null or Certificate');
     assert(!key || 'sign' in key, 'key must be null or PrivateKey');
 
-    this[CERT] = cert || pki.certificateFromPem(certPem);
-    this[KEY] = key || pki.privateKeyFromPem(keyPem);
-    this[PEM] = {};
-    Object.defineProperties(this[PEM], {
-      cert: { value: certPem, enumerable: true },
-      key: { value: keyPem, enumerable: true }
-    });
+    this[CERT] = cert;
+    this[KEY] = key;
+    this[PEM] = null;
   }
 
   get cert() {
@@ -41,8 +35,18 @@ class Cert {
     return this[KEY];
   }
 
-  get pem() {
-    return this[PEM];
+  pem() {
+    let pem = this[PEM];
+    if (!pem) {
+      pem = this[PEM] = {
+        cert: pki.certificateToPem(this[CERT]),
+        key: pki.privateKeyToPem(this[KEY])
+      };
+    }
+    return {
+      cert: pem.cert,
+      key: pem.key
+    };
   }
 
   issue(commonName, days, altNames) {
@@ -88,12 +92,7 @@ function makeCert(issuer, commonName, days, altNames) {
   cert.setIssuer(issuer.cert.subject.attributes);
   cert.sign(issuer.key, forge.md.sha256.create());
 
-  return new Cert(
-    pki.certificateToPem(cert),
-    pki.privateKeyToPem(keyPair.privateKey),
-    cert,
-    keyPair.privateKey
-  );
+  return new Cert(cert, keyPair.privateKey);
 }
 
 function createCertificate(commonName, days, altNames) {
@@ -127,12 +126,14 @@ function createCertificate(commonName, days, altNames) {
 
 function load(certFile, keyFile, fn) {
   let promise = Promise.all([util.readFile(certFile), util.readFile(keyFile)])
-    .then(files => new Cert(files[0], files[1]));
+    .then(files => loadPem(files[0], files[1]));
   return util.fit(promise, fn);
 }
 
 function loadPem(certPem, keyPem) {
-  return new Cert(certPem, keyPem);
+  let cert = pki.certificateFromPem(certPem);
+  let key = pki.privateKeyFromPem(keyPem);
+  return new Cert(cert, key);
 }
 
 function makeCa(commonName, days) {
