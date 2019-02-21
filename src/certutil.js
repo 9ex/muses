@@ -67,7 +67,8 @@ class Cert {
       util.writeFile(certFile, this.pem.cert),
       util.writeFile(keyFile, this.pem.key)
     ]).then(() => this);
-    return util.fit(promise, fn, true);
+
+    return util.fit(promise, fn);
   }
 }
 
@@ -125,8 +126,10 @@ function createCertificate(commonName, days, altNames) {
 }
 
 function load(certFile, keyFile, fn) {
-  let promise = Promise.all([util.readFile(certFile), util.readFile(keyFile)])
-    .then(files => loadPem(files[0], files[1]));
+  let promise = Promise.all([
+    util.readFile(certFile),
+    util.readFile(keyFile)
+  ]).then(files => loadPem(files[0], files[1]));
   return util.fit(promise, fn);
 }
 
