@@ -152,8 +152,11 @@ class DecryptHttpsOptions {
 }
 
 function createServer(proxy, protocol, options) {
-  let server = protocol.createServer(options || {})
-    .on('request', requestHandler.bind(undefined, proxy))
+  let server = options
+    ? protocol.createServer(options)
+    : protocol.createServer();
+
+  server.on('request', requestHandler.bind(undefined, proxy))
     .on('connect', connectHandler.bind(undefined, proxy))
     .on('clientError', (_, socket) => socket && socket.end())
     .on('connection', socket => {
