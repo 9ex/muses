@@ -20,6 +20,9 @@
     "pre-commit": "^1.2.2",
     "superagent": "^4.1.0"
   },
+  "engines": {
+    "node": ">= 10.0.0"
+  },
   "scripts": {
     "test": "jest",
     "lint": "eslint . --ext .js",
