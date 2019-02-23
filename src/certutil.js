@@ -64,9 +64,10 @@ class Cert {
   }
 
   save(certFile, keyFile, fn) {
+    let pem = this.pem();
     let promise = Promise.all([
-      fs.writeFile(certFile, this.pem.cert),
-      fs.writeFile(keyFile, this.pem.key)
+      fs.writeFile(certFile, pem.cert),
+      fs.writeFile(keyFile, pem.key)
     ]).then(() => this);
 
     return util.fit(promise, fn);
