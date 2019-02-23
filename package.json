@@ -5,6 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "debug": "^4.1.1",
+    "lru-cache": "^5.1.1",
     "node-forge": "^0.8.0",
     "proxy-agent": "^3.0.3",
     "tmp": "0.0.33"
