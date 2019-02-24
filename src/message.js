@@ -214,10 +214,13 @@ class Response extends Message {
 }
 
 function getUrl(req) {
-  let base = (req.socket.encrypted ? 'https://' : 'http://') + req.headers.host;
-  let url = new URL(req.url, base);
+  let rawUrl = req.url;
+  let protocol = rawUrl.split('://', 1)[0];
+  if (~protocol.indexOf('/')) {
+    rawUrl = (req.socket.encrypted ? 'https://' : 'http://') + req.headers.host + rawUrl;
+  }
+  let url = new URL(rawUrl);
   url.port = +url.port || (req.socket.encrypted ? 443 : 80);
-
   let hostname = url.hostname;
   if (hostname.startsWith('[') && hostname.endsWith(']')) {
     url.hostname = hostname.slice(1, -1);
