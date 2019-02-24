@@ -3,6 +3,7 @@ const http = require('http');
 const https = require('https');
 const EventEmitter = require('events');
 const debug = require('debug')('muses:proxy');
+const Certs = require('./certs');
 const requestHandler = require('./request').handler;
 const connectHandler = require('./connect').handler;
 
@@ -15,11 +16,24 @@ const DECRYPT_HTTPS = Symbol('proxy.decryptHttps');
  * core service
  */
 class Proxy extends EventEmitter {
-  constructor() {
+  constructor(options) {
     super();
 
+    assert(!options || typeof options === 'object', 'options should be object');
+
+    let certs;
+    if (options.ca) {
+      certs = new Certs(options.ca);
+    } else if (options.certPem && options.keyPem) {
+      certs = new Certs(options.caCertPem, options.caKeyPem);
+    }
+
     this[SERVER] = createServer(this, http);
-    this[HTTPS_SERVER] = createServer(this, https);
+
+    let ca = certs.getRoot();
+    let httpsOptions = ca.pem();
+    httpsOptions.SNICallback = SNICallback.bind(certs);
+    this[HTTPS_SERVER] = createServer(this, https, httpsOptions);
     this[DECRYPT_HTTPS] = new DecryptHttpsOptions();
   }
 
@@ -170,6 +184,10 @@ function createServer(proxy, protocol, options) {
     });
   server.timeout = DEFAULT_TIMEOUT;
   return server;
+}
+
+function SNICallback(certs, servername, cb) {
+  cb(null, certs.get(servername));
 }
 
 DecryptHttpsOptions.INCLUDE = 'include';
