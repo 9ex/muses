@@ -1,4 +1,6 @@
 const http = require('http');
+const https = require('https');
+const debug = require('debug')('muses:request');
 const ReadableStream = require('stream').Readable;
 const { Request, Response } = require('./message');
 
@@ -13,12 +15,13 @@ async function handler(proxy, reader, writer) {
       writer
     });
   } catch (err) {
-    // todo: error handling
+    debug('error occurred: %s', err);
   }
 }
 
 async function receive(ctx) {
   let req = new Request(ctx.reader);
+  debug('received request: %s', req.url);
   ctx.proxy.emit('request', req);
 
   let {
@@ -37,15 +40,7 @@ async function invoke(ctx, req, reqBody) {
   if (reqBody !== undefined && req.hasHeader('Content-Length')) {
     req.setHeader('Content-Length', Buffer.byteLength(reqBody).toString());
   }
-  let options = {
-    host: req.host,
-    hostname: req.hostname,
-    port: req.port,
-    method: req.method,
-    headers: req.headers,
-    path: req.path
-  };
-  let replier = await sendRequest(options, reqBody || req._raw);
+  let replier = await sendRequest(req.secure ? https : http, req.options(), reqBody || req._raw);
   let res = new Response(replier);
   ctx.proxy.emit('response', res);
 
@@ -111,9 +106,9 @@ async function executeExtensions(msg) {
   };
 }
 
-function sendRequest(options, data) {
+function sendRequest(proto, options, data) {
   return new Promise((resolve, reject) => {
-    let req = http.request(options, resolve);
+    let req = proto.request(options, resolve);
     req.setNoDelay();
     req.on('error', reject);
     req.setTimeout(REQUEST_TIMEOUT, () => reject(new Error('Request timeout')));
