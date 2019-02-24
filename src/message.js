@@ -173,12 +173,32 @@ class Request extends Message {
 
     let url = getUrl(req);
     this.method = req.method;
-    this.path = url.pathname + url.search;
+    this.secure = url.protocol === 'https:';
+    this.pathname = url.pathname;
+    this.search = url.search;
     this.host = url.host;
     this.hostname = url.hostname;
-    this.url = url.toString();
     this.port = url.port;
-    this.secure = url.protocol === 'https:';
+    this.hash = url.hash;
+
+    Object.defineProperty(this, 'url', {
+      value: url
+    });
+  }
+
+  get path() {
+    return this.pathname + this.search;
+  }
+
+  options() {
+    return {
+      host: this.host,
+      hostname: this.hostname,
+      port: this.port,
+      method: this.method,
+      headers: this.headers,
+      path: this.path
+    };
   }
 }
 
