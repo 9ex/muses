@@ -3,7 +3,7 @@ const http = require('http');
 const https = require('https');
 const EventEmitter = require('events');
 const debug = require('debug')('muses:proxy');
-const Certs = require('./certs');
+const CertCache = require('./cert_cache');
 const requestHandler = require('./request').handler;
 const connectHandler = require('./connect').handler;
 
@@ -19,20 +19,23 @@ class Proxy extends EventEmitter {
   constructor(options) {
     super();
 
-    assert(!options || typeof options === 'object', 'options should be object');
-
-    let certs;
-    if (options.ca) {
-      certs = new Certs(options.ca);
-    } else if (options.certPem && options.keyPem) {
-      certs = new Certs(options.caCertPem, options.caKeyPem);
+    let certCache;
+    if (options) {
+      assert(typeof options === 'object', 'options should be object');
+      if (options.ca) {
+        certCache = new CertCache(options.ca);
+      } else if (options.certPem && options.keyPem) {
+        certCache = new CertCache(options.caCertPem, options.caKeyPem);
+      }
+    } else {
+      certCache = new CertCache();
     }
 
     this[SERVER] = createServer(this, http);
 
-    let ca = certs.getRoot();
+    let ca = certCache.getRoot();
     let httpsOptions = ca.pem();
-    httpsOptions.SNICallback = SNICallback.bind(certs);
+    httpsOptions.SNICallback = SNICallback.bind(undefined, certCache);
     this[HTTPS_SERVER] = createServer(this, https, httpsOptions);
     this[DECRYPT_HTTPS] = new DecryptHttpsOptions();
   }
@@ -77,19 +80,21 @@ class Proxy extends EventEmitter {
   }
 
   assignHttpRequest(clientSocket, remoteSocket, buf) {
+    debug('assign http request: %s:%d', remoteSocket.remoteAddress, remoteSocket.remotePort);
+    clientSocket.muses.remoteSocket = remoteSocket;
+    this[SERVER].emit('connection', clientSocket);
     if (buf) {
       clientSocket.unshift(buf);
     }
-    clientSocket.muses.remoteSocket = remoteSocket;
-    this[SERVER].emit('connection', clientSocket);
   }
 
   assignHttpsRequest(clientSocket, remoteSocket, buf) {
+    debug('assign https request: %s:%d', remoteSocket.remoteAddress, remoteSocket.remotePort);
+    clientSocket.muses.remoteSocket = remoteSocket;
+    this[HTTPS_SERVER].emit('connection', clientSocket);
     if (buf) {
       clientSocket.unshift(buf);
     }
-    clientSocket.muses.remoteSocket = remoteSocket;
-    this[HTTPS_SERVER].emit('connection', clientSocket);
   }
 
   /**
@@ -186,8 +191,8 @@ function createServer(proxy, protocol, options) {
   return server;
 }
 
-function SNICallback(certs, servername, cb) {
-  cb(null, certs.get(servername));
+function SNICallback(certCache, servername, cb) {
+  cb(null, certCache.get(servername));
 }
 
 DecryptHttpsOptions.INCLUDE = 'include';
