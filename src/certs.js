@@ -61,3 +61,4 @@ class CertsCache {
   }
 }
 
+module.exports = CertsCache;
