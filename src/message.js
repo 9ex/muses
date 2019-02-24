@@ -1,3 +1,5 @@
+const debug = require('debug')('muses:message');
+
 const RAW = Symbol('raw');
 const HEADERS = Symbol('headers');
 const GREEDY = Symbol('greedy');
@@ -166,27 +168,17 @@ class Message {
 }
 
 class Request extends Message {
-  constructor(msg) {
-    super(msg);
+  constructor(req) {
+    super(req);
 
-    let url = new URL(msg.url);
-    this.method = msg.method;
-    this.path = `${url.pathname}${url.search}`;
-    this.host = url.host || this.header('host');
-    this.url = `http://${this.host}${this.path}`;
-
-    let m = this.host.match(/^(.+)(?::(\d+))$/i);
-    if (m) {
-      if (m[1][0] === '[') {
-        this.hostname = m[1].slice(1, -1);
-      } else {
-        this.hostname = m[1];
-      }
-      this.port = Number(m[2]);
-    } else {
-      this.hostname = this.host;
-      this.port = 80;
-    }
+    let url = getUrl(req);
+    this.method = req.method;
+    this.path = url.pathname + url.search;
+    this.host = url.host;
+    this.hostname = url.hostname;
+    this.url = url.toString();
+    this.port = url.port;
+    this.secure = url.protocol === 'https:';
   }
 }
 
@@ -199,6 +191,19 @@ class Response extends Message {
 
     this.request = request instanceof Request ? request : null;
   }
+}
+
+function getUrl(req) {
+  let base = (req.socket.encrypted ? 'https://' : 'http://') + req.headers.host;
+  let url = new URL(req.url, base);
+  url.port = +url.port || (req.socket.encrypted ? 443 : 80);
+
+  let hostname = url.hostname;
+  if (hostname.startsWith('[') && hostname.endsWith(']')) {
+    url.hostname = hostname.slice(1, -1);
+  }
+
+  return url;
 }
 
 exports.Message = Message;
