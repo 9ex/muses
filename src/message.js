@@ -1,5 +1,3 @@
-const debug = require('debug')('muses:message');
-
 const RAW = Symbol('raw');
 const HEADERS = Symbol('headers');
 const GREEDY = Symbol('greedy');
@@ -215,11 +213,11 @@ class Request extends Message {
 }
 
 class Response extends Message {
-  constructor(msg, request) {
-    super(msg);
+  constructor(res, request) {
+    super(res);
 
-    this.statusCode = msg.statusCode;
-    this.statusMessage = msg.statusMessage;
+    this.statusCode = res.statusCode;
+    this.statusMessage = res.statusMessage;
 
     this.request = request instanceof Request ? request : null;
   }
