@@ -37,7 +37,7 @@ async function receive(ctx) {
   if (res) {
     reply(ctx, res, resBody);
   } else {
-    invoke(ctx, req, srcBody);
+    await invoke(ctx, req, srcBody);
   }
 }
 
@@ -45,7 +45,14 @@ async function invoke(ctx, req, reqBody) {
   if (reqBody !== undefined && req.hasHeader('Content-Length')) {
     req.setHeader('Content-Length', Buffer.byteLength(reqBody).toString());
   }
-  let replier = await sendRequest(req.secure ? https : http, req.options(), reqBody || req._raw);
+  let proto = req.secure ? https : http;
+  let options = req.toRequestOptions();
+  let socket = req._muses.remoteSocket;
+  if (socket) {
+    debug('reuse remote socket: %s:%d', socket.remoteAddress, socket.remotePort);
+    options.createConnection = () => socket;
+  }
+  let replier = await sendRequest(proto, options, reqBody || req._raw);
   let res = new Response(replier);
   ctx.proxy.emit('response', res);
 

@@ -15,11 +15,14 @@ async function handler(proxy, request, clientSocket, head) {
 
       clientSocket.once('data', buf => {
         clientSocket.pause();
+        if (head && head.length) {
+          buf = Buffer.concat([head, buf]);
+        }
         let proto = protocol.analyze(buf);
         if (proto.type === protocol.HTTP) {
           proxy.assignHttpRequest(clientSocket, remoteSocket, buf);
         } else if (proto.type === protocol.SSL && ~proto.alpn.indexOf('http/1.1')) {
-          proxy.assignHttpsRequest(clientSocket, remoteSocket, buf);
+          proxy.assignHttpsRequest(hostname, clientSocket, remoteSocket, buf);
         } else {
           pipe(clientSocket, remoteSocket, buf);
         }

@@ -36,6 +36,10 @@ class Message {
     return this[RAW];
   }
 
+  get _socket() {
+    return this[RAW].socket;
+  }
+
   /**
    * get header value
    * @param {string} name
@@ -177,20 +181,28 @@ class Request extends Message {
     this.pathname = url.pathname;
     this.search = url.search;
     this.host = url.host;
-    this.hostname = url.hostname;
-    this.port = url.port;
+    this.port = +url.port || (req.socket.encrypted ? 443 : 80);
     this.hash = url.hash;
+    let hostname = this.hostname = url.hostname;
+    if (hostname.startsWith('[') && hostname.endsWith(']')) {
+      this.hostname = hostname.slice(1, -1);
+    }
 
     Object.defineProperty(this, 'url', {
       value: url
     });
   }
 
+  get _muses() {
+    let socket = this._socket;
+    return socket._parent ? socket._parent.muses : socket.muses;
+  }
+
   get path() {
     return this.pathname + this.search;
   }
 
-  options() {
+  toRequestOptions() {
     return {
       host: this.host,
       hostname: this.hostname,
@@ -220,12 +232,6 @@ function getUrl(req) {
     rawUrl = (req.socket.encrypted ? 'https://' : 'http://') + req.headers.host + rawUrl;
   }
   let url = new URL(rawUrl);
-  url.port = +url.port || (req.socket.encrypted ? 443 : 80);
-  let hostname = url.hostname;
-  if (hostname.startsWith('[') && hostname.endsWith(']')) {
-    url.hostname = hostname.slice(1, -1);
-  }
-
   return url;
 }
 

@@ -1,6 +1,7 @@
 const assert = require('assert');
 const http = require('http');
 const https = require('https');
+const tls = require('tls');
 const EventEmitter = require('events');
 const debug = require('debug')('muses:proxy');
 const CertCache = require('./cert_cache');
@@ -88,9 +89,23 @@ class Proxy extends EventEmitter {
     }
   }
 
-  assignHttpsRequest(clientSocket, remoteSocket, buf) {
+  assignHttpsRequest(hostname, clientSocket, remoteSocket, buf) {
     debug('assign https request: %s:%d', remoteSocket.remoteAddress, remoteSocket.remotePort);
-    clientSocket.muses.remoteSocket = remoteSocket;
+
+    let tlssock = new tls.TLSSocket(remoteSocket, {
+      secureContext: tls.createSecureContext({
+        rejectUnauthorized: true,
+        ciphers: tls.DEFAULT_CIPHERS,
+        checkServerIdentity: tls.checkServerIdentity,
+        minDHSize: 1024
+      }),
+      isServer: false,
+      requestCert: true,
+      rejectUnauthorized: true
+    });
+    tlssock._releaseControl();
+    tlssock.setServername(hostname);
+    clientSocket.muses.remoteSocket = tlssock;
     this[HTTPS_SERVER].emit('connection', clientSocket);
     if (buf) {
       clientSocket.unshift(buf);
