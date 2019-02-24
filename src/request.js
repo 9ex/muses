@@ -9,7 +9,7 @@ const MAX_BUFFER_SIZE = 4 * 1024 * 1024;
 
 async function handler(proxy, reader, writer) {
   try {
-    receive({
+    await receive({
       proxy,
       reader,
       writer
