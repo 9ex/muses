@@ -16,6 +16,11 @@ async function handler(proxy, reader, writer) {
     });
   } catch (err) {
     debug('error occurred: %s', err);
+
+    if (!writer.headersSent) {
+      writer.writeHead(502, 'Proxy Error');
+      writer.end(err.stack);
+    }
   }
 }
 
