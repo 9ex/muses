@@ -1,4 +1,4 @@
-const agent = require('./globalAgent');
+const agent = require('./global_agent');
 const protocol = require('./protocol');
 const debug = require('debug')('muses:connect');
 

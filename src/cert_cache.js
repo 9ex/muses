@@ -7,7 +7,7 @@ const ROOT_NAME = 'MUSES_ROOT_CA';
 const ROOT_DAYS = 365 * 5;
 const DEFAULT_DAYS = 14;
 
-class CertsCache {
+class CertCache {
   constructor() {
     Object.defineProperty(this, '_cache', {
       value: new LRU()
@@ -61,4 +61,4 @@ class CertsCache {
   }
 }
 
-module.exports = CertsCache;
+module.exports = CertCache;
