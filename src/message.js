@@ -1,11 +1,26 @@
-const RAW = Symbol('raw');
-const HEADERS = Symbol('headers');
-const GREEDY = Symbol('greedy');
-const TAMPER = Symbol('tamper');
-const RESPONDER = Symbol('responder');
+const assert = require('assert');
+
+const RAW = Symbol('message.raw');
+const HEADERS = Symbol('message.headers');
+const GREEDY = Symbol('message.greedy');
+const TAMPER = Symbol('message.tamper');
+const RESPONDER = Symbol('message.responder');
+const SESSION = Symbol('message.session');
 
 class Message {
-  constructor(msg) {
+  constructor(session, msg) {
+    assert(session, 'must specify session argument');
+
+    this[SESSION] = session;
+    if (msg) {
+      this.init(msg);
+    }
+  }
+
+  init(msg) {
+    assert(!this[RAW], 'message already initialized');
+    assert(msg.rawHeaders && msg.headers, 'msg must be http.IncomingMessage or http.OutgoingMessage');
+
     this[RAW] = msg;
 
     let rawHeaders = msg.rawHeaders;
@@ -28,14 +43,20 @@ class Message {
     this[GREEDY] = false;
     this[TAMPER] = null;
     this[RESPONDER] = null;
+
+    return this;
+  }
+
+  get session() {
+    return this[SESSION];
+  }
+
+  get connection() {
+    return this.session.connection;
   }
 
   get _raw() {
     return this[RAW];
-  }
-
-  get _socket() {
-    return this[RAW].socket;
   }
 
   /**
@@ -170,8 +191,8 @@ class Message {
 }
 
 class Request extends Message {
-  constructor(req) {
-    super(req);
+  init(req) {
+    super.init(req);
 
     let url = getUrl(req);
     this.method = req.method;
@@ -189,11 +210,8 @@ class Request extends Message {
     Object.defineProperty(this, 'url', {
       value: url
     });
-  }
 
-  get _muses() {
-    let socket = this._socket;
-    return socket._parent ? socket._parent.muses : socket.muses;
+    return this;
   }
 
   get path() {
@@ -213,13 +231,13 @@ class Request extends Message {
 }
 
 class Response extends Message {
-  constructor(res, request) {
-    super(res);
+  init(res) {
+    super.init(res);
 
     this.statusCode = res.statusCode;
     this.statusMessage = res.statusMessage;
 
-    this.request = request instanceof Request ? request : null;
+    return this;
   }
 }
 
