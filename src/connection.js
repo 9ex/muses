@@ -1,8 +1,8 @@
 const assert = require('assert');
-const { Request, Response } = require('./message');
+const { Incoming, Outgoing } = require('./message');
 
-const REQUEST = Symbol('session.request');
-const RESPONSE = Symbol('session.response');
+const INCOMING = Symbol('session.incoming');
+const OUTGOING = Symbol('session.outgoing');
 const CONNECTION = Symbol('session.connection');
 const SESSIONS = Symbol('session.');
 
@@ -11,28 +11,28 @@ class Session {
     assert(conn instanceof Connection, 'conn muse be Connection');
 
     this[CONNECTION] = conn;
-    this[REQUEST] = new Request(this);
-    this[RESPONSE] = new Response(this);
+    this[INCOMING] = new Incoming(this);
+    this[OUTGOING] = new Outgoing(this);
   }
 
-  get connection() {
+  get conn() {
     return this[CONNECTION];
   }
 
-  get request() {
-    return this[REQUEST];
+  get incoming() {
+    return this[INCOMING];
   }
 
-  get response() {
-    return this[RESPONSE];
+  get outgoing() {
+    return this[OUTGOING];
   }
 
-  initRequest(req) {
-    return this[REQUEST].init(req);
+  initIncoming(req) {
+    return this[INCOMING].init(req);
   }
 
-  initResponse(res) {
-    return this[RESPONSE].init(res);
+  initOutgoing(res) {
+    return this[OUTGOING].init(res);
   }
 }
 

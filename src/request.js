@@ -2,87 +2,92 @@ const http = require('http');
 const https = require('https');
 const debug = require('debug')('muses:request');
 const ReadableStream = require('stream').Readable;
+const Outgoing = require('./message').Outgoing;
 
 const REQUEST_TIMEOUT = 3600 * 1000;
 const MAX_BUFFER_SIZE = 4 * 1024 * 1024;
 
-async function handler(proxy, reader, writer) {
+async function handler(proxy, request, response) {
   try {
     await receive({
       proxy,
-      session: reader.session,
-      reader,
-      writer
+      session: request.session,
+      request,
+      response
     });
   } catch (err) {
     debug('error occurred: %s', err);
 
-    if (!writer.headersSent) {
-      writer.writeHead(502, 'Proxy Error');
-      writer.end(err.stack);
+    if (!response.headersSent) {
+      response.writeHead(502, 'Proxy Error');
+      response.end(err.stack);
     }
   }
 }
 
 async function receive(ctx) {
-  let req = ctx.session.initRequest(ctx.reader);
-  debug('received request: %s', req.url);
-  ctx.proxy.emit('request', req);
+  let incoming = ctx.session.initIncoming(ctx.request);
+  debug('received request: %s', incoming.url);
+  ctx.proxy.emit('request', incoming);
 
   let {
-    res,
-    resBody,
+    outgoing,
+    outBody,
     srcBody
-  } = await executeExtensions(req);
-  if (res) {
-    reply(ctx, res, resBody);
+  } = await executeExtensions(incoming);
+  if (outgoing) {
+    reply(ctx, outgoing, outBody);
   } else {
-    await invoke(ctx, req, srcBody);
+    await invoke(ctx, incoming, srcBody);
   }
 }
 
-async function invoke(ctx, req, reqBody) {
-  if (reqBody !== undefined && req.hasHeader('Content-Length')) {
-    req.setHeader('Content-Length', Buffer.byteLength(reqBody).toString());
+async function invoke(ctx, incoming, reqBody) {
+  if (reqBody !== undefined && incoming.hasHeader('Content-Length')) {
+    incoming.setHeader('Content-Length', Buffer.byteLength(reqBody).toString());
   }
-  let proto = req.secure ? https : http;
-  let options = req.toRequestOptions();
-  let socket = req.connection.remoteSocket;
+  let proto = incoming.secure ? https : http;
+  let options = incoming.toRequestOptions();
+  let socket = incoming.connection.remoteSocket;
   if (socket) {
     debug('reuse remote socket: %s:%d', socket.remoteAddress, socket.remotePort);
     options.createConnection = () => socket;
   }
-  let replier = await sendRequest(proto, options, reqBody || req._raw);
-  let res = ctx.session.initResponse(replier);
-  ctx.proxy.emit('response', res);
+  let replies = await sendRequest(proto, options, reqBody || incoming._raw);
+  let outgoing = ctx.session.initOutgoing(replies);
+  ctx.proxy.emit('response', outgoing);
 
   let {
-    res: res2,
-    resBody,
+    outgoing: res,
+    outBody,
     srcBody
-  } = await executeExtensions(res);
-  reply(ctx, res2 || res, resBody || srcBody);
+  } = await executeExtensions(outgoing);
+  reply(ctx, res || outgoing, outBody || srcBody);
 }
 
-function reply(ctx, res, body) {
-  let writer = ctx.writer;
-  if (res.statusMessage) {
-    writer.statusMessage = res.statusMessage;
+function reply(ctx, outgoing, body) {
+  if (!(outgoing instanceof Outgoing)) {
+    outgoing = ctx.session.initOutgoing(outgoing);
   }
-  if (body !== undefined && res.hasHeader('Content-Length')) {
-    res.setHeader('Content-Length', Buffer.byteLength(body).toString());
+
+  let response = ctx.response;
+  if (outgoing.statusMessage) {
+    response.statusMessage = outgoing.statusMessage;
   }
-  writer.writeHead(res.statusCode, res.headers);
+  if (body !== undefined && outgoing.hasHeader('Content-Length')) {
+    outgoing.setHeader('Content-Length', Buffer.byteLength(body).toString());
+  }
+  response.writeHead(outgoing.statusCode, outgoing.headers);
   if (body !== undefined) {
-    writer.end(body);
+    response.end(body);
   } else {
-    res._raw.pipe(writer);
+    outgoing._raw.pipe(response);
   }
 }
 
 async function executeExtensions(msg) {
-  let res;
-  let resBody;
+  let outgoing;
+  let outBody;
   let srcBody;
 
   if (msg.greedy) {
@@ -97,23 +102,34 @@ async function executeExtensions(msg) {
   if (msg.responder) {
     let ret = await msg.responder(srcBody, msg);
     if (ret && typeof ret === 'object') {
-      if (!ret.headers) {
-        ret.headers = {};
+      let headers = ret.headers || {};
+      let rawHeaders = [];
+      for (let k in headers) {
+        let v = headers[k];
+        if (!(v instanceof Array)) {
+          v = [v];
+        }
+        for (let i of v) {
+          rawHeaders.push(k);
+          rawHeaders.push(i);
+        }
       }
-      if (!ret.statusCode) {
-        ret.statusCode = 200;
-      }
-      res = new Response(ret);
+      outgoing = {
+        headers,
+        rawHeaders,
+        statusCode: ret.statusCode || 200
+      };
+      
       if (typeof ret.body === 'string' || ret.body instanceof Buffer) {
-        resBody = ret.body;
+        outBody = ret.body;
       } else {
-        resBody = '';
+        outBody = '';
       }
     }
   }
   return {
-    res,
-    resBody,
+    res: outgoing,
+    outBody,
     srcBody
   };
 }

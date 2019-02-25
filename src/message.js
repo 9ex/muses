@@ -19,7 +19,7 @@ class Message {
 
   init(msg) {
     assert(!this[RAW], 'message already initialized');
-    assert(msg.rawHeaders && msg.headers, 'msg must be http.IncomingMessage or http.OutgoingMessage');
+    assert(msg.rawHeaders && msg.headers, 'msg must be http.IncomingMessage');
 
     this[RAW] = msg;
 
@@ -190,7 +190,7 @@ class Message {
   }
 }
 
-class Request extends Message {
+class Incoming extends Message {
   init(req) {
     super.init(req);
 
@@ -230,7 +230,7 @@ class Request extends Message {
   }
 }
 
-class Response extends Message {
+class Outgoing extends Message {
   init(res) {
     super.init(res);
 
@@ -251,6 +251,5 @@ function getUrl(req) {
   return url;
 }
 
-exports.Message = Message;
-exports.Request = Request;
-exports.Response = Response;
+exports.Incoming = Incoming;
+exports.Outgoing = Outgoing;
