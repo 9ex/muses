@@ -2,7 +2,6 @@ const http = require('http');
 const https = require('https');
 const debug = require('debug')('muses:request');
 const ReadableStream = require('stream').Readable;
-const { Request, Response } = require('./message');
 
 const REQUEST_TIMEOUT = 3600 * 1000;
 const MAX_BUFFER_SIZE = 4 * 1024 * 1024;
@@ -11,6 +10,7 @@ async function handler(proxy, reader, writer) {
   try {
     await receive({
       proxy,
+      session: reader.session,
       reader,
       writer
     });
@@ -25,7 +25,7 @@ async function handler(proxy, reader, writer) {
 }
 
 async function receive(ctx) {
-  let req = new Request(ctx.reader);
+  let req = ctx.session.initRequest(ctx.reader);
   debug('received request: %s', req.url);
   ctx.proxy.emit('request', req);
 
@@ -47,13 +47,13 @@ async function invoke(ctx, req, reqBody) {
   }
   let proto = req.secure ? https : http;
   let options = req.toRequestOptions();
-  let socket = req._muses.remoteSocket;
+  let socket = req.connection.remoteSocket;
   if (socket) {
     debug('reuse remote socket: %s:%d', socket.remoteAddress, socket.remotePort);
     options.createConnection = () => socket;
   }
   let replier = await sendRequest(proto, options, reqBody || req._raw);
-  let res = new Response(replier);
+  let res = ctx.session.initResponse(replier);
   ctx.proxy.emit('response', res);
 
   let {

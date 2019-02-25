@@ -5,6 +5,7 @@ const tls = require('tls');
 const EventEmitter = require('events');
 const debug = require('debug')('muses:proxy');
 const CertCache = require('./cert_cache');
+const Connection = require('./connection');
 const requestHandler = require('./request').handler;
 const connectHandler = require('./connect').handler;
 
@@ -190,18 +191,31 @@ function createServer(proxy, protocol, options) {
     ? protocol.createServer(options)
     : protocol.createServer();
 
-  server.on('request', requestHandler.bind(undefined, proxy))
-    .on('connect', connectHandler.bind(undefined, proxy))
-    .on('clientError', (_, socket) => socket && socket.end())
-    .on('connection', socket => {
-      if (!socket.muses) {
-        socket.setNoDelay();
-        Object.defineProperty(socket, 'muses', { value: {} });
-        socket.once('error', err => {
-          debug('client socket encounter an error: %s %s', err.code, err.message);
-        });
-      }
-    });
+  server.on('request', (req, res) => {
+    let session = req.socket.muses.newSession();
+    Object.defineProperty(req, 'session', { value: session });
+    Object.defineProperty(res, 'session', { value: session });
+
+    requestHandler(proxy, req, res);
+  }).on('connect', (req, socket, head) => {
+    let session = socket.muses.newSession();
+    Object.defineProperty(req, 'session', { value: session });
+
+    connectHandler(proxy, req, socket, head);
+  }).on('clientError', (_, socket) => {
+    socket && socket.end();
+  }).on('connection', socket => {
+    if (!socket.muses) {
+      socket.setNoDelay();
+      let muses = new Connection(socket);
+      Object.defineProperty(socket, 'muses', { value: muses });
+      socket.once('error', err => {
+        debug('client socket encounter an error: %s %s', err.code, err.message);
+      });
+    }
+  }).on('secureConnection', socket => {
+    Object.defineProperty(socket, 'muses', { value: socket._parent.muses });
+  });
   server.timeout = DEFAULT_TIMEOUT;
   return server;
 }
