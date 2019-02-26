@@ -15,7 +15,7 @@ class Session {
     this[OUTGOING] = new Outgoing(this);
   }
 
-  get conn() {
+  get connection() {
     return this[CONNECTION];
   }
 
