@@ -66,10 +66,6 @@ async function invoke(ctx, incoming, reqBody) {
 }
 
 function reply(ctx, outgoing, body) {
-  if (!(outgoing instanceof Outgoing)) {
-    outgoing = ctx.session.initOutgoing(outgoing);
-  }
-
   let response = ctx.response;
   if (outgoing.statusMessage) {
     response.statusMessage = outgoing.statusMessage;
@@ -102,24 +98,11 @@ async function executeExtensions(msg) {
   if (msg.responder) {
     let ret = await msg.responder(srcBody, msg);
     if (ret && typeof ret === 'object') {
-      let headers = ret.headers || {};
-      let rawHeaders = [];
-      for (let k in headers) {
-        let v = headers[k];
-        if (!(v instanceof Array)) {
-          v = [v];
-        }
-        for (let i of v) {
-          rawHeaders.push(k);
-          rawHeaders.push(i);
-        }
-      }
-      outgoing = {
-        headers,
-        rawHeaders,
+      outgoing = msg.session.initOutgoing({
+        headers: ret.headers || {},
         statusCode: ret.statusCode || 200
-      };
-      
+      });
+
       if (typeof ret.body === 'string' || ret.body instanceof Buffer) {
         outBody = ret.body;
       } else {

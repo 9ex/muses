@@ -19,23 +19,33 @@ class Message {
 
   init(msg) {
     assert(!this[RAW], 'message already initialized');
-    assert(msg.rawHeaders && msg.headers, 'msg must be http.IncomingMessage');
+    assert(msg.rawHeaders || msg.headers, 'invalid msg argument');
 
     this[RAW] = msg;
 
     let rawHeaders = msg.rawHeaders;
     let headers = {};
-    for (let i = 0; i < rawHeaders.length; i += 2) {
-      let name = rawHeaders[i];
-      let lname = name.toLowerCase();
-      let header = headers[lname];
-      if (!header) {
-        header = headers[lname] = {
+    if (rawHeaders) {
+      for (let i = 0; i < rawHeaders.length; i += 2) {
+        let name = rawHeaders[i];
+        let lname = name.toLowerCase();
+        let header = headers[lname];
+        if (!header) {
+          header = headers[lname] = {
+            name,
+            values: []
+          };
+        }
+        header.values.push(rawHeaders[i + 1]);
+      }
+    } else {
+      let msgHeaders = msg.headers;
+      for (let name of msgHeaders) {
+        headers[name.toLowerCase()] = {
           name,
-          values: []
+          values: msgHeaders[name]
         };
       }
-      header.values.push(rawHeaders[i + 1]);
     }
     this[HEADERS] = headers;
 
