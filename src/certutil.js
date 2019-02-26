@@ -1,6 +1,6 @@
 const assert = require('assert');
 const util = require('./util');
-const fs = require('fs').promises;
+const fs = util.fsPromise;
 const forge = require('node-forge');
 const pki = forge.pki;
 
