@@ -10,6 +10,7 @@ class TcpAgent {
 
   send(data) {
     this._sends.push(data);
+    return this;
   }
 
   reply(data) {
@@ -21,28 +22,32 @@ class TcpAgent {
     return new Promise((resolve, reject) => {
       let proxy = this._proxy;
       !proxy.listening && proxy.listen(0);
+      let client;
       let server = net.createServer().listen(0);
       let cleanup = () => {
+        client && client.end();
         proxy.close();
         server.close();
       };
-      return new Promise((resolve, reject) => {
-        let clientReceived = {};
-        let serverReceived = {};
-        let done = err => {
-          done.count = 1 + done.count || 0;
-          if (err) {
-            cleanup();
-            reject(err);
-          } else if (done.count === 2) {
-            cleanup();
-            setTimeout(resolve, 5, { clientReceived, serverReceived });
-          }
-        };
+      let clientReceived = {};
+      let serverReceived = {};
+      let completed = 0;
+      let complete = err => {
+        completed++;
+        if (err) {
+          cleanup();
+          reject(err);
+        } else if (completed === 2) {
+          cleanup();
+          setTimeout(resolve, 5, { clientReceived, serverReceived });
+        }
+      };
 
-        server.on('connection', socket => reply(socket, serverReceived, done));
-        send(proxy.address().port, server.address().port, clientReceived, done);
+      server.on('connection', socket => {
+        client = socket;
+        reply(this._replies, socket, serverReceived, complete);
       });
+      send(this._sends, proxy.address().port, server.address().port, clientReceived, complete);
     });
   }
 }
@@ -59,10 +64,10 @@ function record(recorder, socket) {
   });
 }
 
-function reply(socket, recorder, done) {
+function reply(replies, socket, recorder, done) {
   socket.on('error', done);
   let write = () => {
-    let data = this._replies.shift();
+    let data = replies.shift();
     if (data) {
       socket.write(data);
       setTimeout(write, 5);
@@ -74,7 +79,7 @@ function reply(socket, recorder, done) {
   record(recorder, socket);
 }
 
-function send(proxyPort, serverPort, recorder, done) {
+function send(sends, proxyPort, serverPort, recorder, done) {
   let socket = net.connect(proxyPort, () => {
     socket.write(`CONNECT 127.0.0.1:${serverPort} HTTP/1.1\r\n\r\n`);
     socket.once('data', d => {
@@ -86,7 +91,7 @@ function send(proxyPort, serverPort, recorder, done) {
         done(err);
       }
       let read = () => {
-        let data = this._sends.shift();
+        let data = sends.shift();
         if (data) {
           socket.write(data);
           setTimeout(read, 5);
