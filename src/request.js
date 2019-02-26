@@ -2,7 +2,6 @@ const http = require('http');
 const https = require('https');
 const debug = require('debug')('muses:request');
 const ReadableStream = require('stream').Readable;
-const Outgoing = require('./message').Outgoing;
 
 const REQUEST_TIMEOUT = 3600 * 1000;
 const MAX_BUFFER_SIZE = 4 * 1024 * 1024;
