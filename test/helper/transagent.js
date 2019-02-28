@@ -1,4 +1,5 @@
 const http = require('http');
+const https = require('https');
 const superagent = require('superagent');
 const proxyAgent = require('proxy-agent');
 const Agent = superagent.agent;
@@ -7,15 +8,16 @@ const Request = superagent.Request;
 const Response = superagent.Response;
 
 class TransAgent extends Agent {
-  constructor(proxy) {
+  constructor(proxy, httpsOptions) {
     super();
     this.proxy = proxy;
+    this.httpsOptions = httpsOptions;
   }
 }
 
 http.METHODS.forEach(method => {
   TransAgent.prototype[method.toLowerCase()] = function (path) {
-    let req = new Transceiver(this.proxy, method, path);
+    let req = new Transceiver(this.proxy, this.httpsOptions, method, path);
 
     req.on('response', this._saveCookies.bind(this));
     req.on('redirect', this._saveCookies.bind(this));
@@ -43,15 +45,16 @@ Object.defineProperties(Response.prototype, {
 });
 
 class Transceiver extends Request {
-  constructor(proxy, method, path) {
+  constructor(proxy, httpsOptions, method, path) {
     super(method.toUpperCase(), path);
     this.redirects(0);
     this.buffer();
     this.proxy = proxy;
-    let server = new MockServer();
+    let server = new MockServer(httpsOptions);
     server.listen();
     this.server = server;
-    this.url = `${getUrl(server.address())}${path}`;
+    let protocol = httpsOptions ? 'https' : 'http';
+    this.url = `${getUrl(server.address(), protocol)}${path}`;
     if (proxy instanceof Proxy && !proxy.listening) {
       proxy.listen();
       this.agent(proxyAgent(getUrl(proxy.address())));
@@ -79,8 +82,8 @@ class Transceiver extends Request {
 }
 
 class MockServer {
-  constructor() {
-    this._server = http.createServer();
+  constructor(httpsOptions) {
+    this._server = httpsOptions ? https.createServer(httpsOptions) : http.createServer();
   }
   reply(options) {
     if (typeof options === 'string') {
