@@ -13,6 +13,7 @@ const DEFAULT_TIMEOUT = 2 * 3600 * 1000;
 const SERVER = Symbol('proxy.server');
 const HTTPS_SERVER = Symbol('proxy.httpsServer');
 const DECRYPT_HTTPS = Symbol('proxy.decryptHttps');
+const CA = Symbol('proxy.ca');
 
 /**
  * core service
@@ -40,6 +41,11 @@ class Proxy extends EventEmitter {
     httpsOptions.SNICallback = SNICallback.bind(undefined, certCache);
     this[HTTPS_SERVER] = createServer(this, https, httpsOptions);
     this[DECRYPT_HTTPS] = new DecryptHttpsOptions();
+    this[CA] = ca;
+  }
+
+  get ca() {
+    return this[CA];
   }
 
   get decryptHttps() {
@@ -207,11 +213,12 @@ function createServer(proxy, protocol, options) {
   }).on('connection', socket => {
     if (!socket.muses) {
       socket.setNoDelay();
-      let muses = new Connection(socket);
-      Object.defineProperty(socket, 'muses', { value: muses });
+      let conn = new Connection(socket);
+      Object.defineProperty(socket, 'muses', { value: conn });
       socket.once('error', err => {
         debug('client socket encounter an error: %s %s', err.code, err.message);
       });
+      proxy.emit('connection', conn);
     }
   }).on('secureConnection', socket => {
     Object.defineProperty(socket, 'muses', { value: socket._parent.muses });
