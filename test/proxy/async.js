@@ -6,8 +6,8 @@ describe('proxy.async', () => {
   it('delay request', async () => {
     let delay = 200;
     let proxy = new Proxy();
-    proxy.on('request', req => {
-      req.tamper = () => new Promise(resolve => setTimeout(resolve, delay));
+    proxy.on('incoming', ic => {
+      ic.tamper = () => new Promise(resolve => setTimeout(resolve, delay));
     });
 
     let startTime = Date.now();

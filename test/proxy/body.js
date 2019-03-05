@@ -5,8 +5,8 @@ const assert = require('assert');
 describe('proxy.body.modify', () => {
   it('modify request body', async () => {
     let proxy = new Proxy();
-    proxy.on('request', req => {
-      req.tamper = body => JSON.stringify({ msg: body.toString() });
+    proxy.on('incoming', ic => {
+      ic.tamper = body => JSON.stringify({ msg: body.toString() });
     });
 
     let { serverReceived } =
@@ -20,8 +20,8 @@ describe('proxy.body.modify', () => {
 
   it('modify response body', async () => {
     let proxy = new Proxy();
-    proxy.on('response', res => {
-      res.tamper = body => JSON.stringify({ msg: body.toString() });
+    proxy.on('outgoing', og => {
+      og.tamper = body => JSON.stringify({ msg: body.toString() });
     });
 
     let { clientReceived } =

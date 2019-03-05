@@ -27,7 +27,7 @@ async function handler(proxy, request, response) {
 async function receive(ctx) {
   let incoming = ctx.session.initIncoming(ctx.request);
   debug('received request: %s', incoming.url);
-  ctx.proxy.emit('request', incoming);
+  ctx.proxy.emit('incoming', incoming, ctx.session);
 
   let {
     outgoing,
@@ -54,7 +54,7 @@ async function invoke(ctx, incoming, reqBody) {
   }
   let replies = await sendRequest(proto, options, reqBody || incoming._raw);
   let outgoing = ctx.session.initOutgoing(replies);
-  ctx.proxy.emit('response', outgoing);
+  ctx.proxy.emit('outgoing', outgoing, ctx.session);
 
   let {
     outgoing: res,

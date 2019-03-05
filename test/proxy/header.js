@@ -5,8 +5,8 @@ const assert = require('assert');
 describe('proxy.header.modify', () => {
   it('modify request & response headers', async () => {
     let proxy = new Proxy();
-    proxy.on('request', req => req.setHeader('X-Req-Key', 'xyz'));
-    proxy.on('response', res => res.setHeader('X-Res-Key', '123'));
+    proxy.on('incoming', ic => ic.setHeader('X-Req-Key', 'xyz'));
+    proxy.on('outgoing', og => og.setHeader('X-Res-Key', '123'));
 
     let { clientReceived, serverReceived } =
     await trans(proxy)
